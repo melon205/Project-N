@@ -1,4 +1,5 @@
 # Unity generated folders
+[Uu]tmp/
 [Ll]ibrary/
 [Tt]emp/
 [Oo]bj/
@@ -6,9 +7,12 @@
 [Bb]uilds/
 [Ll]ogs/
 MemoryCaptures/
+[Rr]ecordings/
 UserSettings/
+ServerData/
 
 # Unity generated files
+*.log
 *.csproj
 *.unityproj
 *.sln
@@ -18,16 +22,41 @@ UserSettings/
 *.user
 *.userprefs
 *.pidb
+*.pidb.meta
 *.booproj
 *.svd
 *.pdb
+*.pdb.meta
 *.mdb
+*.mdb.meta
 *.opendb
 *.VC.db
+sysinfo.txt
+mono_crash.*
+*.apk
+*.aab
+*.app
+*.unitypackage
+*.unitypackage.meta
 
 # Visual Studio / VS Code
 .vs/
 .vscode/
+.gradle/
+*.DotSettings.user
+
+# Common Unity imports / generated data
+*.blend1
+*.blend1.meta
+[Aa]ssets/StreamingAssets/aa*
+[Aa]ssets/AddressableAssetsData/link.xml*
+[Aa]ssets/AddressableAssetsData/*/*.bin*
+[Aa]ssets/Addressables_Temp*
+[Aa]ssets/Unity.VisualScripting.Generated/VisualScripting.Flow/UnitOptions.db
+[Aa]ssets/Unity.VisualScripting.Generated/VisualScripting.Flow/UnitOptions.db.meta
+[Aa]ssets/Unity.VisualScripting.Generated/VisualScripting.Core/Property Providers
+[Aa]ssets/Unity.VisualScripting.Generated/VisualScripting.Core/Property Providers.meta
+[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
 
 # Stray nested repository
 projectn/
