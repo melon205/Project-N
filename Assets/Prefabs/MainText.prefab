@@ -1,0 +1,169 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &4363765086981714718
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4197480076692583162}
+  - component: {fileID: 4497326222406185359}
+  - component: {fileID: 3235649101837270899}
+  m_Layer: 5
+  m_Name: MainText
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &4197480076692583162
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4363765086981714718}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 990.5476, y: 2389.4}
+  m_Pivot: {x: 0.5, y: 1}
+--- !u!222 &4497326222406185359
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4363765086981714718}
+  m_CullTransparentMesh: 1
+--- !u!114 &3235649101837270899
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4363765086981714718}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_text: "\uC774\uD50C \uC544\uB828 \uB3C4\uC11C\uAD00 \uACF0\uB2E4\uC2DC \uBCC4\uD558
+    \uB2E4\uC19C \uC18C\uC19C \uB3C4\uC11C\uAD00 \uC548\uB155 \uC544\uB9AC\uC544
+    \uC18C\uB85D\uC18C\uB85D \uAC00\uC628\uB204\uB9AC \uC544\uB828 \uD568\uCD08\uB871\uD558\uB2E4
+    \uC548\uB155 \uB3C4\uB974\uB808 \uC5EC\uC6B0\uBE44 \uADF8\uB8E8\uC7A0 \uB2E4\uC19C
+    \uBCC4\uBE5B \uC608\uADF8\uB9AC\uB098 \uB178\uD2B8\uBD81 \uCC45\uBC29 \uD568\uCD08\uB871\uD558\uB2E4
+    \uB3C4\uB974\uB808 \uCC45\uBC29 \uB178\uD2B8\uBD81 \uADF8\uB8E8\uC7A0 \uAC00\uC628\uD574
+    \uB2EC\uBCD3 \uCEF4\uD4E8\uD130 \uC6B0\uB9AC\uB294 \uD3EC\uB3C4 \uAC00\uC628\uB204\uB9AC
+    \uC548\uB155 \uBCC4\uD558 \uC5EC\uC6B0\uBE44 \uB2EC\uBCD3 \uCEF4\uD4E8\uD130
+    \uB098\uB798 \uBCC4\uBE5B \uB2EC\uBCD3 \uBCC4\uBE5B \uB178\uD2B8\uBD81 \uC544\uC2AC\uB77C
+    \uC605\uAD6C\uB984 \uC774\uD50C \uC6B0\uB9AC\uB294 \uC0AC\uACFC \uBE44\uB098\uB9AC.\r\n\r\n\uBC14\uB098\uB098
+    \uB3C4\uB974\uB808 \uB2E4\uC19C \uBC14\uB78C\uAF43 \uBE44\uB098\uB9AC \uBBF8\uC058\uB2E4
+    \uACF0\uB2E4\uC2DC \uAC10\uC0AC\uD569\uB2C8\uB2E4 \uC0B0\uB4E4\uB9BC \uC544\uB984\uB4DC\uB9AC
+    \uB098\uBE44\uC7A0 \uBC14\uB78C\uAF43 \uC544\uB828 \uC5EC\uC6B0\uBE44 \uB2EC\uBCD3
+    \uB2EC\uBCD3 \uC544\uB984\uB4DC\uB9AC \uB3C4\uB2F4\uB3C4\uB2F4 \uBCC4\uBE5B \uBCC4\uD558
+    \uBBF8\uB9AC\uB0B4 \uB098\uBE44\uC7A0 \uB3C4\uB2F4\uB3C4\uB2F4 \uBBF8\uC058\uB2E4
+    \uC0B0\uB4E4\uB9BC \uC544\uB984\uB4DC\uB9AC \uBCC4\uD558 \uACF0\uB2E4\uC2DC \uC18C\uB85D\uC18C\uB85D
+    \uB85C\uC6B4 \uC18C\uB85D\uC18C\uB85D \uC544\uB984\uB4DC\uB9AC \uB178\uD2B8\uBD81
+    \uC5EC\uC6B0\uBCC4 \uB178\uD2B8\uBD81 \uC5EC\uC6B0\uBCC4 \uAC00\uC628\uD574 \uC608\uADF8\uB9AC\uB098
+    \uC544\uB9AC\uC544 \uC544\uB828 \uB3C4\uB2F4\uB3C4\uB2F4 \uBE44\uB098\uB9AC \uD568\uCD08\uB871\uD558\uB2E4
+    \uCC45\uBC29 \uC544\uB828 \uB2EC\uBCD3 \uB3C4\uC11C \uC774\uD50C \uC608\uADF8\uB9AC\uB098
+    \uBBF8\uC058\uB2E4.\r\n\r\n\uB2E4\uC19C \uBCC4\uD558 \uB2E4\uC19C \uAC10\uC0AC\uD569\uB2C8\uB2E4
+    \uBC14\uB78C\uAF43 \uBCC4\uD558 \uB2E4\uC19C \uB098\uB798 \uC544\uB984\uB4DC\uB9AC
+    \uAC00\uC628\uB204\uB9AC \uBBF8\uB9AC\uB0B4 \uC605\uAD6C\uB984 \uAC10\uC0AC\uD569\uB2C8\uB2E4
+    \uC6B0\uB9AC\uB294 \uC5EC\uC6B0\uBE44 \uBE44\uB098\uB9AC \uBC14\uB78C\uAF43 \uC544\uB9AC\uC544
+    \uACF0\uB2E4\uC2DC \uC548\uB155 \uB85C\uC6B4 \uCC45\uBC29 \uCEF4\uD4E8\uD130
+    \uAC10\uB610\uAC1C \uC0B0\uB4E4\uB9BC \uC544\uB9AC\uC544 \uAC10\uC0AC\uD569\uB2C8\uB2E4
+    \uAC00\uC628\uD574 \uC0AC\uACFC \uB3C4\uB974\uB808 \uC5EC\uC6B0\uBE44 \uBCC4\uD558
+    \uBCC4\uBE5B \uC608\uADF8\uB9AC\uB098 \uAC00\uC628\uD574 \uBBF8\uB9AC\uB0B4 \uB3C4\uB2F4\uB3C4\uB2F4
+    \uADF8\uB8E8\uC7A0 \uB3C4\uB974\uB808 \uAC00\uC628\uD574 \uB85C\uC6B4 \uBCC4\uBE5B
+    \uC5EC\uC6B0\uBE44 \uB3C4\uC11C\uAD00 \uAC00\uC628\uD574 \uC608\uADF8\uB9AC\uB098
+    \uBCC4\uD558 \uC774\uD50C \uC18C\uB85D\uC18C\uB85D \uC0AC\uACFC."
+  m_isRightToLeft: 0
+  m_fontAsset: {fileID: 11400000, guid: 0546abf144bf69b4b86908c6789c9908, type: 2}
+  m_sharedMaterial: {fileID: -5636195922290264662, guid: 0546abf144bf69b4b86908c6789c9908, type: 2}
+  m_fontSharedMaterials: []
+  m_fontMaterial: {fileID: 0}
+  m_fontMaterials: []
+  m_fontColor32:
+    serializedVersion: 2
+    rgba: 4294967295
+  m_fontColor: {r: 1, g: 1, b: 1, a: 1}
+  m_enableVertexGradient: 0
+  m_colorMode: 3
+  m_fontColorGradient:
+    topLeft: {r: 1, g: 1, b: 1, a: 1}
+    topRight: {r: 1, g: 1, b: 1, a: 1}
+    bottomLeft: {r: 1, g: 1, b: 1, a: 1}
+    bottomRight: {r: 1, g: 1, b: 1, a: 1}
+  m_fontColorGradientPreset: {fileID: 0}
+  m_spriteAsset: {fileID: 0}
+  m_tintAllSprites: 0
+  m_StyleSheet: {fileID: 0}
+  m_TextStyleHashCode: -1183493901
+  m_overrideHtmlColors: 0
+  m_faceColor:
+    serializedVersion: 2
+    rgba: 4294967295
+  m_fontSize: 50
+  m_fontSizeBase: 50
+  m_fontWeight: 400
+  m_enableAutoSizing: 0
+  m_fontSizeMin: 18
+  m_fontSizeMax: 72
+  m_fontStyle: 0
+  m_HorizontalAlignment: 1
+  m_VerticalAlignment: 256
+  m_textAlignment: 65535
+  m_characterSpacing: 0
+  m_characterHorizontalScale: 1
+  m_wordSpacing: 0
+  m_lineSpacing: 0
+  m_lineSpacingMax: 0
+  m_paragraphSpacing: 0
+  m_charWidthMaxAdj: 0
+  m_TextWrappingMode: 1
+  m_wordWrappingRatios: 0.4
+  m_overflowMode: 0
+  m_linkedTextComponent: {fileID: 0}
+  parentLinkedComponent: {fileID: 0}
+  m_enableKerning: 0
+  m_ActiveFontFeatures: 6e72656b
+  m_enableExtraPadding: 0
+  checkPaddingRequired: 0
+  m_isRichText: 1
+  m_EmojiFallbackSupport: 1
+  m_parseCtrlCharacters: 1
+  m_isOrthographic: 1
+  m_isCullingEnabled: 0
+  m_horizontalMapping: 0
+  m_verticalMapping: 0
+  m_uvLineOffset: 0
+  m_geometrySortingOrder: 0
+  m_IsTextObjectScaleStatic: 0
+  m_VertexBufferAutoSizeReduction: 0
+  m_useMaxVisibleDescender: 1
+  m_pageToDisplay: 1
+  m_margin: {x: 0, y: 0, z: 0, w: 0}
+  m_isUsingLegacyAnimationComponent: 0
+  m_isVolumetricText: 0
+  m_hasFontAssetChanged: 0
+  m_baseMaterial: {fileID: 0}
+  m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
