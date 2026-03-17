@@ -1,4 +1,16 @@
 ﻿title: MainStory
+position: 0,-58
 ---
-This is an example of a Yarn Spinner script. Write your dialogue here!
+문이 닫혀있습니다.
+-> 문을 연다<<if has_item("key")>> #requires_item:key
+	첫 번째 선택지 선택함
+	<<jump SecondStory>>
+-> 아무것도 안한다.
+	두 번째 선택지 선택함
+===
+title: SecondStory
+position: 127,188
+---
+그러하다.
+->네.
 ===
