@@ -1,5 +1,5 @@
 ﻿title: MainStory
-position: 0,-58
+position: -55,-60
 ---
 문이 닫혀있습니다.
 -> 문을 연다<<if has_item("key")>> #requires_item:key
@@ -9,7 +9,7 @@ position: 0,-58
 	두 번째 선택지 선택함
 ===
 title: SecondStory
-position: 127,188
+position: 101,186
 ---
 그러하다.
 ->네.

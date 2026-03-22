@@ -9,8 +9,14 @@ public static class InventoryYarnBridge
         return InventoryManager.Instance != null && InventoryManager.Instance.HasItem(itemId);
     }
 
+    [YarnFunction("item_count")]
+    public static float ItemCount(string itemId)
+    {
+        return InventoryManager.Instance != null ? InventoryManager.Instance.GetQuantity(itemId) : 0f;
+    }
+
     [YarnCommand("give_item")]
-    public static void GiveItem(string itemId)
+    public static void GiveItem(string itemId, int quantity = 1)
     {
         if (InventoryManager.Instance == null)
         {
@@ -18,11 +24,11 @@ public static class InventoryYarnBridge
             return;
         }
 
-        InventoryManager.Instance.AddItem(itemId);
+        InventoryManager.Instance.AddItem(itemId, quantity);
     }
 
     [YarnCommand("remove_item")]
-    public static void RemoveItem(string itemId)
+    public static void RemoveItem(string itemId, int quantity = 1)
     {
         if (InventoryManager.Instance == null)
         {
@@ -30,6 +36,6 @@ public static class InventoryYarnBridge
             return;
         }
 
-        InventoryManager.Instance.RemoveItem(itemId);
+        InventoryManager.Instance.RemoveItem(itemId, quantity);
     }
 }
