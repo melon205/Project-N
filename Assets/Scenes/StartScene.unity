@@ -160,9 +160,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 308472315}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f8426bda2af8d0d4e942555e03f2a59a, type: 3}
+  m_Script: {fileID: 11500000, guid: 5f257561a6e77604fa129c95e8d89d17, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameDir
+  startSceneName: StartScene
+  mapSceneName: MapScene
+  mainSceneName: GameScene
 --- !u!1 &519420028
 GameObject:
   m_ObjectHideFlags: 0
@@ -786,8 +789,8 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 308472317}
-        m_TargetAssemblyTypeName: GameDir, Assembly-CSharp
-        m_MethodName: stclick
+        m_TargetAssemblyTypeName: InteractionHandler, Assembly-CSharp
+        m_MethodName: StartToGame
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}

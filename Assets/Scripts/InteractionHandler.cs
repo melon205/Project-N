@@ -4,8 +4,10 @@ using UnityEngine.SceneManagement; // 씬 관리를 위한 필수 네임스페�
 public class InteractionHandler : MonoBehaviour
 {
     [Header("Scene Names")]
+    [Tooltip("StartScene")]
+    public string startSceneName = "StartScene";
     [Tooltip("MapScene")]
-    public string detailSceneName = "MapScene";
+    public string mapSceneName = "MapScene";
 
     [Tooltip("GameScene")]
     public string mainSceneName = "GameScene";
@@ -13,12 +15,12 @@ public class InteractionHandler : MonoBehaviour
     /// <summary>
     /// 상세 화면으로 이동합니다. (Map 이미지 버튼에 연결)
     /// </summary>
-    public void GoToMapDetail()
+    public void GameToMap()
     {
-        if (!string.IsNullOrEmpty(detailSceneName))
+        if (!string.IsNullOrEmpty(mapSceneName))
         {
-            SceneManager.LoadScene(detailSceneName);
-            Debug.Log($"[Interaction] {detailSceneName}으로 이동합니다.");
+            SceneManager.LoadScene(mapSceneName);
+            Debug.Log($"[Interaction] {mapSceneName}으로 이동합니다.");
         }
         else
         {
@@ -26,9 +28,6 @@ public class InteractionHandler : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 메인 화면으로 돌아갑니다. (상세 화면의 '뒤로가기' 버튼에 연결)
-    /// </summary>
     public void BackToMain()
     {
         if (!string.IsNullOrEmpty(mainSceneName))
@@ -38,7 +37,20 @@ public class InteractionHandler : MonoBehaviour
         }
     }
 
-    public void GoToGameDetail()
+    public void MapToGame()
+    {
+        if (!string.IsNullOrEmpty(mainSceneName))
+        {
+            SceneManager.LoadScene(mainSceneName);
+            Debug.Log($"[Interaction] {mainSceneName}으로 이동합니다.");
+        }
+        else
+        {
+            Debug.LogError("이동할 씬 이름이 설정되지 않았습니다!");
+        }
+    }
+
+    public void StartToGame()
     {
         if (!string.IsNullOrEmpty(mainSceneName))
         {
