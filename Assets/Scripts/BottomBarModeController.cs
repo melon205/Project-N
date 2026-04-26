@@ -1,4 +1,4 @@
-using System.Collections;
+using DG.Tweening;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Events;
@@ -49,7 +49,7 @@ public class BottomBarModeController : MonoBehaviour
     [SerializeField] private Color activeButtonColor = Color.white;
     [SerializeField] private Color inactiveButtonColor = new Color(1f, 1f, 1f, 0.55f);
 
-    private Coroutine transitionCoroutine;
+    private Sequence transitionSequence;
     private PanelMode? currentMode;
     private bool initialized;
 
@@ -68,6 +68,8 @@ public class BottomBarModeController : MonoBehaviour
 
     private void OnDestroy()
     {
+        KillTransition();
+
         if (panels == null)
         {
             return;
@@ -108,12 +110,8 @@ public class BottomBarModeController : MonoBehaviour
             return;
         }
 
-        if (transitionCoroutine != null)
-        {
-            StopCoroutine(transitionCoroutine);
-        }
-
-        transitionCoroutine = StartCoroutine(AnimateSwitch(mode));
+        KillTransition();
+        AnimateSwitch(mode);
     }
 
     public void HideCurrentPanel()
@@ -125,12 +123,8 @@ public class BottomBarModeController : MonoBehaviour
             return;
         }
 
-        if (transitionCoroutine != null)
-        {
-            StopCoroutine(transitionCoroutine);
-        }
-
-        transitionCoroutine = StartCoroutine(AnimateHide(currentMode.Value));
+        KillTransition();
+        AnimateHide(currentMode.Value);
     }
 
     private void Initialize()
@@ -198,14 +192,14 @@ public class BottomBarModeController : MonoBehaviour
         initialized = true;
     }
 
-    private IEnumerator AnimateSwitch(PanelMode nextMode)
+    private void AnimateSwitch(PanelMode nextMode)
     {
         PanelBinding currentBinding = currentMode.HasValue ? GetBinding(currentMode.Value) : null;
         PanelBinding nextBinding = GetBinding(nextMode);
 
         if (nextBinding == null || nextBinding.panel == null || nextBinding.canvasGroup == null)
         {
-            yield break;
+            return;
         }
 
         if (currentBinding != null && currentBinding.canvasGroup != null)
@@ -231,48 +225,45 @@ public class BottomBarModeController : MonoBehaviour
                 : GetLeftHiddenPosition(nextBinding.panel, nextBinding.shownPosition));
         Vector2 toNext = nextBinding.shownPosition;
 
-        float elapsed = 0f;
-        while (elapsed < animationDuration)
-        {
-            elapsed += Time.deltaTime;
-            float t = Mathf.Clamp01(elapsed / animationDuration);
-            float easedT = animationCurve.Evaluate(t);
+        nextBinding.panel.anchoredPosition = fromNext;
+        nextBinding.canvasGroup.alpha = 0f;
 
-            if (currentBinding != null && currentBinding.panel != null && currentBinding.canvasGroup != null)
-            {
-                currentBinding.panel.anchoredPosition = Vector2.LerpUnclamped(fromCurrent, toCurrent, easedT);
-                currentBinding.canvasGroup.alpha = Mathf.LerpUnclamped(1f, 0f, easedT);
-            }
-
-            nextBinding.panel.anchoredPosition = Vector2.LerpUnclamped(fromNext, toNext, easedT);
-            nextBinding.canvasGroup.alpha = Mathf.LerpUnclamped(0f, 1f, easedT);
-
-            yield return null;
-        }
-
+        transitionSequence = DOTween.Sequence();
         if (currentBinding != null && currentBinding.panel != null && currentBinding.canvasGroup != null)
         {
-            currentBinding.panel.anchoredPosition = toCurrent;
-            currentBinding.canvasGroup.alpha = 0f;
-            currentBinding.panel.gameObject.SetActive(false);
+            currentBinding.panel.anchoredPosition = fromCurrent;
+            transitionSequence.Join(ApplyEase(currentBinding.panel.DOAnchorPos(toCurrent, animationDuration)));
+            transitionSequence.Join(ApplyEase(currentBinding.canvasGroup.DOFade(0f, animationDuration)));
         }
 
-        nextBinding.panel.anchoredPosition = nextBinding.shownPosition;
-        nextBinding.canvasGroup.alpha = 1f;
-        nextBinding.canvasGroup.interactable = true;
-        nextBinding.canvasGroup.blocksRaycasts = true;
+        transitionSequence.Join(ApplyEase(nextBinding.panel.DOAnchorPos(toNext, animationDuration)));
+        transitionSequence.Join(ApplyEase(nextBinding.canvasGroup.DOFade(1f, animationDuration)));
+        transitionSequence.OnComplete(() =>
+        {
+            if (currentBinding != null && currentBinding.panel != null && currentBinding.canvasGroup != null)
+            {
+                currentBinding.panel.anchoredPosition = toCurrent;
+                currentBinding.canvasGroup.alpha = 0f;
+                currentBinding.panel.gameObject.SetActive(false);
+            }
 
-        currentMode = nextMode;
-        UpdateButtonVisuals(nextMode);
-        transitionCoroutine = null;
+            nextBinding.panel.anchoredPosition = nextBinding.shownPosition;
+            nextBinding.canvasGroup.alpha = 1f;
+            nextBinding.canvasGroup.interactable = true;
+            nextBinding.canvasGroup.blocksRaycasts = true;
+
+            currentMode = nextMode;
+            UpdateButtonVisuals(nextMode);
+            transitionSequence = null;
+        });
     }
 
-    private IEnumerator AnimateHide(PanelMode modeToHide)
+    private void AnimateHide(PanelMode modeToHide)
     {
         PanelBinding binding = GetBinding(modeToHide);
         if (binding == null || binding.panel == null || binding.canvasGroup == null)
         {
-            yield break;
+            return;
         }
 
         binding.canvasGroup.interactable = false;
@@ -280,26 +271,39 @@ public class BottomBarModeController : MonoBehaviour
 
         Vector2 from = binding.shownPosition;
         Vector2 to = GetBottomHiddenPosition(binding.panel, binding.shownPosition);
-        float elapsed = 0f;
+        binding.panel.anchoredPosition = from;
 
-        while (elapsed < animationDuration)
+        transitionSequence = DOTween.Sequence();
+        transitionSequence.Join(ApplyEase(binding.panel.DOAnchorPos(to, animationDuration)));
+        transitionSequence.Join(ApplyEase(binding.canvasGroup.DOFade(0f, animationDuration)));
+        transitionSequence.OnComplete(() =>
         {
-            elapsed += Time.deltaTime;
-            float t = Mathf.Clamp01(elapsed / animationDuration);
-            float easedT = animationCurve.Evaluate(t);
+            binding.panel.anchoredPosition = to;
+            binding.canvasGroup.alpha = 0f;
+            binding.panel.gameObject.SetActive(false);
 
-            binding.panel.anchoredPosition = Vector2.LerpUnclamped(from, to, easedT);
-            binding.canvasGroup.alpha = Mathf.LerpUnclamped(1f, 0f, easedT);
-            yield return null;
+            currentMode = null;
+            UpdateButtonVisuals(currentMode);
+            transitionSequence = null;
+        });
+    }
+
+    private Tween ApplyEase(Tween tween)
+    {
+        return animationCurve != null && animationCurve.length > 0
+            ? tween.SetEase(animationCurve)
+            : tween;
+    }
+
+    private void KillTransition()
+    {
+        if (transitionSequence == null)
+        {
+            return;
         }
 
-        binding.panel.anchoredPosition = to;
-        binding.canvasGroup.alpha = 0f;
-        binding.panel.gameObject.SetActive(false);
-
-        currentMode = null;
-        UpdateButtonVisuals(currentMode);
-        transitionCoroutine = null;
+        transitionSequence.Kill();
+        transitionSequence = null;
     }
 
     private void UpdateButtonVisuals(PanelMode? activeMode)

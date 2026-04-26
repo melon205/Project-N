@@ -1,55 +1,70 @@
-using UnityEngine;
 using DG.Tweening;
+using UnityEngine;
 
 public class MapController : MonoBehaviour
 {
+    private const float HiddenPadding = 100f;
+    private const float FallbackHiddenY = 3000f;
+
     [Header("UI References")]
     public RectTransform mapPanelRect;
-    
+
     [Header("Settings")]
     public float transitionDuration = 0.5f;
     public Ease transitionEase = Ease.OutCubic;
+    [SerializeField] private float visibleY = 0f;
 
-    private bool isMapActive = false;
-    private float visibleY = 0f;
-    
-    // 지도가 완전히 숨겨지기 위한 Y 좌표를 계산하는 함수
-    private float GetHiddenY()
-    {
-        if (mapPanelRect == null) return 3000f; // 기본값
-        
-        // 부모(Canvas) 높이의 절반 + 자기 자신 높이의 절반 + 여유분(100)
-        // 화면 해상도가 바뀌어도 대응할 수 있도록 계산합니다.
-        float screenHeight = 2340f; // 기준 해상도
-        return (screenHeight / 2f) + (mapPanelRect.rect.height / 2f) + 100f;
-    }
+    private bool isMapActive;
 
-    void Awake()
+    private void Awake()
     {
-        if (mapPanelRect != null)
+        if (mapPanelRect == null)
         {
-            // 시작 시 계산된 Hidden 위치로 즉시 이동
-            mapPanelRect.anchoredPosition = new Vector2(0, GetHiddenY());
+            return;
         }
+
+        SetPanelY(GetHiddenY());
     }
 
     public void ToggleMap()
     {
-        if (mapPanelRect == null) return;
+        if (mapPanelRect == null)
+        {
+            return;
+        }
 
-        isMapActive = !isMapActive;
-        
-        // 목표 위치 설정
+        SetMapVisible(!isMapActive);
+    }
+
+    private void SetMapVisible(bool visible)
+    {
+        isMapActive = visible;
         float targetY = isMapActive ? visibleY : GetHiddenY();
 
-        // 부드러운 이동 애니메이션
-        mapPanelRect.DOAnchorPosY(targetY, transitionDuration)
-                    .SetEase(transitionEase)
-                    .OnComplete(() => {
-                        // 선택사항: 지도가 완전히 닫히면 오브젝트를 비활성화해서 터치를 막을 수도 있습니다.
-                        // if (!isMapActive) mapPanelRect.gameObject.SetActive(false);
-                    });
+        mapPanelRect.DOKill();
+        mapPanelRect
+            .DOAnchorPosY(targetY, transitionDuration)
+            .SetEase(transitionEase);
 
-        Debug.Log("지도 활성화 상태: " + isMapActive);
+        Debug.Log($"Map active: {isMapActive}", this);
+    }
+
+    private float GetHiddenY()
+    {
+        if (mapPanelRect == null)
+        {
+            return FallbackHiddenY;
+        }
+
+        RectTransform parentRect = mapPanelRect.parent as RectTransform;
+        float referenceHeight = parentRect != null ? parentRect.rect.height : Screen.height;
+        return (referenceHeight * 0.5f) + (mapPanelRect.rect.height * 0.5f) + HiddenPadding;
+    }
+
+    private void SetPanelY(float y)
+    {
+        Vector2 position = mapPanelRect.anchoredPosition;
+        position.y = y;
+        mapPanelRect.anchoredPosition = position;
     }
 }

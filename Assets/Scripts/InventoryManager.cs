@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using Yarn.Unity;
 
 public class InventoryManager : MonoBehaviour
 {
@@ -13,10 +14,6 @@ public class InventoryManager : MonoBehaviour
 
     [Header("Database")]
     [SerializeField] private InventoryItemDefinition[] itemDefinitions;
-
-    [Header("Starting Items")]
-    [SerializeField] private InventoryItemStack[] startingInventory;
-    [SerializeField] private InventoryItemDefinition[] startingItems;
 
     private readonly Dictionary<string, InventoryItemDefinition> definitionsById = new Dictionary<string, InventoryItemDefinition>(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, int> itemQuantities = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
@@ -86,13 +83,12 @@ public class InventoryManager : MonoBehaviour
 
     public bool HasItem(string itemId, int quantity)
     {
-        if (string.IsNullOrWhiteSpace(itemId) || quantity <= 0)
+        if (quantity <= 0 || !TryResolveItemId(itemId, out string resolvedItemId))
         {
             return false;
         }
 
         Initialize();
-        string resolvedItemId = NormalizeItemId(itemId);
         return itemQuantities.TryGetValue(resolvedItemId, out int ownedQuantity) && ownedQuantity >= quantity;
     }
 
@@ -103,28 +99,28 @@ public class InventoryManager : MonoBehaviour
 
     public bool AddItem(string itemId, int quantity)
     {
-        if (string.IsNullOrWhiteSpace(itemId) || quantity <= 0)
+        if (quantity <= 0)
         {
             return false;
         }
 
         Initialize();
-        string resolvedItemId = NormalizeItemId(itemId);
-        if (string.IsNullOrWhiteSpace(resolvedItemId))
+        if (!TryResolveItemId(itemId, out string resolvedItemId))
         {
             return false;
         }
 
         int currentQuantity = GetQuantityInternal(resolvedItemId);
-        int updatedQuantity = currentQuantity + quantity;
+        int updatedQuantity = ClampQuantityForDefinition(resolvedItemId, currentQuantity + quantity);
+        int addedQuantity = Mathf.Max(0, updatedQuantity - currentQuantity);
+        SetResolvedQuantity(resolvedItemId, updatedQuantity);
+        NotifyInventoryChanged();
 
-        if (TryGetItemDefinitionInternal(resolvedItemId, out InventoryItemDefinition definition) && definition != null && definition.Stackable)
+        if (addedQuantity > 0)
         {
-            updatedQuantity = Mathf.Min(updatedQuantity, definition.MaxStack);
+            ShowInventoryToast(resolvedItemId, addedQuantity, true);
         }
 
-        itemQuantities[resolvedItemId] = Mathf.Max(0, updatedQuantity);
-        NotifyInventoryChanged();
         return true;
     }
 
@@ -135,36 +131,33 @@ public class InventoryManager : MonoBehaviour
 
     public bool RemoveItem(string itemId, int quantity)
     {
-        if (string.IsNullOrWhiteSpace(itemId) || quantity <= 0)
+        if (quantity <= 0)
         {
             return false;
         }
 
         Initialize();
-        string resolvedItemId = NormalizeItemId(itemId);
-        if (string.IsNullOrWhiteSpace(resolvedItemId) || itemQuantities.TryGetValue(resolvedItemId, out int currentQuantity) == false)
+        if (!TryResolveItemId(itemId, out string resolvedItemId) || !itemQuantities.TryGetValue(resolvedItemId, out int currentQuantity))
         {
             return false;
         }
 
-        int updatedQuantity = currentQuantity - quantity;
-        if (updatedQuantity > 0)
+        int removedQuantity = Mathf.Min(currentQuantity, quantity);
+        SetResolvedQuantity(resolvedItemId, currentQuantity - quantity);
+        NotifyInventoryChanged();
+
+        if (removedQuantity > 0)
         {
-            itemQuantities[resolvedItemId] = updatedQuantity;
-        }
-        else
-        {
-            itemQuantities.Remove(resolvedItemId);
+            ShowInventoryToast(resolvedItemId, removedQuantity, false);
         }
 
-        NotifyInventoryChanged();
         return true;
     }
 
     public void SetOwnedItems(IEnumerable<string> itemIds)
     {
         Initialize();
-        itemQuantities.Clear();
+        ClearQuantities();
 
         if (itemIds == null)
         {
@@ -194,44 +187,24 @@ public class InventoryManager : MonoBehaviour
 
     public int GetQuantity(string itemId)
     {
-        if (string.IsNullOrWhiteSpace(itemId))
+        if (!TryResolveItemId(itemId, out string resolvedItemId))
         {
             return 0;
         }
 
         Initialize();
-        string resolvedItemId = NormalizeItemId(itemId);
         return GetQuantityInternal(resolvedItemId);
     }
 
     public bool SetQuantity(string itemId, int quantity)
     {
-        if (string.IsNullOrWhiteSpace(itemId))
-        {
-            return false;
-        }
-
         Initialize();
-        string resolvedItemId = NormalizeItemId(itemId);
-        if (string.IsNullOrWhiteSpace(resolvedItemId))
+        if (!TryResolveItemId(itemId, out string resolvedItemId))
         {
             return false;
         }
 
-        if (quantity > 0)
-        {
-            if (TryGetItemDefinitionInternal(resolvedItemId, out InventoryItemDefinition definition) && definition != null && definition.Stackable)
-            {
-                quantity = Mathf.Min(quantity, definition.MaxStack);
-            }
-
-            itemQuantities[resolvedItemId] = quantity;
-        }
-        else
-        {
-            itemQuantities.Remove(resolvedItemId);
-        }
-
+        SetResolvedQuantity(resolvedItemId, ClampQuantityForDefinition(resolvedItemId, quantity));
         NotifyInventoryChanged();
         return true;
     }
@@ -240,7 +213,7 @@ public class InventoryManager : MonoBehaviour
     {
         Initialize();
 
-        List<InventoryItemStack> stacks = new List<InventoryItemStack>();
+        List<InventoryItemStack> stacks = new List<InventoryItemStack>(itemQuantities.Count);
         foreach (KeyValuePair<string, int> entry in itemQuantities)
         {
             if (entry.Value <= 0)
@@ -266,12 +239,11 @@ public class InventoryManager : MonoBehaviour
     {
         Initialize();
 
-        if (string.IsNullOrWhiteSpace(itemId))
+        if (!TryResolveItemId(itemId, out string resolvedItemId))
         {
             return string.Empty;
         }
 
-        string resolvedItemId = NormalizeItemId(itemId);
         if (definitionsById.TryGetValue(resolvedItemId, out InventoryItemDefinition definition) && definition != null)
         {
             return definition.DisplayName;
@@ -284,13 +256,13 @@ public class InventoryManager : MonoBehaviour
     {
         Initialize();
 
-        if (string.IsNullOrWhiteSpace(itemId))
+        if (!TryResolveItemId(itemId, out string resolvedItemId))
         {
             definition = null;
             return false;
         }
 
-        return TryGetItemDefinitionInternal(itemId, out definition);
+        return TryGetItemDefinitionInternal(resolvedItemId, out definition);
     }
 
     private void Initialize()
@@ -301,7 +273,6 @@ public class InventoryManager : MonoBehaviour
         }
 
         RebuildDefinitionLookup();
-        AddStartingItems();
         initialized = true;
     }
 
@@ -326,50 +297,37 @@ public class InventoryManager : MonoBehaviour
         }
     }
 
-    private void AddStartingItems()
+    public List<ItemSaveData> GetSaveData()
     {
-        bool changed = false;
-
-        if (startingInventory != null)
+        Initialize();
+        List<ItemSaveData> data = new List<ItemSaveData>();
+        foreach (var entry in itemQuantities)
         {
-            for (int i = 0; i < startingInventory.Length; i++)
+            if (entry.Value > 0)
             {
-                InventoryItemStack stack = startingInventory[i];
-                if (stack == null || string.IsNullOrWhiteSpace(stack.ItemId))
+                data.Add(new ItemSaveData(entry.Key, entry.Value));
+            }
+        }
+        return data;
+    }
+
+    public void LoadSaveData(List<ItemSaveData> data)
+    {
+        Initialize();
+        ClearQuantities();
+
+        if (data != null)
+        {
+            foreach (var item in data)
+            {
+                if (!string.IsNullOrWhiteSpace(item.itemId))
                 {
-                    continue;
+                    SetResolvedQuantity(NormalizeItemId(item.itemId), item.quantity);
                 }
-
-                ApplyQuantityChange(stack.ItemId, stack.Quantity);
-                changed = true;
             }
         }
 
-        if (startingItems == null)
-        {
-            if (changed)
-            {
-                NotifyInventoryChanged();
-            }
-            return;
-        }
-
-        for (int i = 0; i < startingItems.Length; i++)
-        {
-            InventoryItemDefinition definition = startingItems[i];
-            if (definition == null || string.IsNullOrWhiteSpace(definition.ItemId))
-            {
-                continue;
-            }
-
-            ApplyQuantityChange(definition.ItemId, 1);
-            changed = true;
-        }
-
-        if (changed)
-        {
-            NotifyInventoryChanged();
-        }
+        NotifyInventoryChanged();
     }
 
     private string NormalizeItemId(string itemId)
@@ -382,30 +340,55 @@ public class InventoryManager : MonoBehaviour
         return itemId.Trim();
     }
 
-    private void ApplyQuantityChange(string itemId, int quantityDelta)
+    private bool TryResolveItemId(string itemId, out string resolvedItemId)
     {
-        string resolvedItemId = NormalizeItemId(itemId);
-        if (string.IsNullOrWhiteSpace(resolvedItemId))
+        resolvedItemId = NormalizeItemId(itemId);
+        return !string.IsNullOrWhiteSpace(resolvedItemId);
+    }
+
+    private int ClampQuantityForDefinition(string resolvedItemId, int quantity)
+    {
+        if (quantity <= 0)
         {
-            return;
+            return 0;
         }
 
-        int currentQuantity = GetQuantityInternal(resolvedItemId);
-        int updatedQuantity = currentQuantity + quantityDelta;
-
-        if (TryGetItemDefinitionInternal(resolvedItemId, out InventoryItemDefinition definition) && definition != null && definition.Stackable && updatedQuantity > 0)
+        if (TryGetItemDefinitionInternal(resolvedItemId, out InventoryItemDefinition definition) && definition != null && definition.Stackable)
         {
-            updatedQuantity = Mathf.Min(updatedQuantity, definition.MaxStack);
+            return Mathf.Min(quantity, definition.MaxStack);
         }
 
-        if (updatedQuantity > 0)
+        return quantity;
+    }
+
+    private void SetResolvedQuantity(string resolvedItemId, int quantity)
+    {
+        if (quantity > 0)
         {
-            itemQuantities[resolvedItemId] = updatedQuantity;
+            itemQuantities[resolvedItemId] = quantity;
         }
         else
         {
             itemQuantities.Remove(resolvedItemId);
         }
+    }
+
+    private bool ApplyQuantityChange(string itemId, int quantityDelta)
+    {
+        if (!TryResolveItemId(itemId, out string resolvedItemId))
+        {
+            return false;
+        }
+
+        int currentQuantity = GetQuantityInternal(resolvedItemId);
+        int updatedQuantity = ClampQuantityForDefinition(resolvedItemId, currentQuantity + quantityDelta);
+        if (updatedQuantity == currentQuantity)
+        {
+            return false;
+        }
+
+        SetResolvedQuantity(resolvedItemId, updatedQuantity);
+        return true;
     }
 
     private static int CompareStacks(InventoryItemStack left, InventoryItemStack right)
@@ -429,42 +412,48 @@ public class InventoryManager : MonoBehaviour
     private static void NotifyInventoryChanged()
     {
         InventoryChanged?.Invoke();
+        if (SaveManager.Instance != null && Application.isPlaying)
+        {
+            SaveManager.Instance.SaveGame();
+        }
     }
 
     public void ClearInventory()
     {
         Initialize();
-        itemQuantities.Clear();
+        ClearQuantities();
         NotifyInventoryChanged();
     }
 
     public void SetInventory(IEnumerable<InventoryItemStack> stacks)
     {
         Initialize();
-        itemQuantities.Clear();
+        ClearQuantities();
 
         if (stacks != null)
         {
             foreach (InventoryItemStack stack in stacks)
             {
-                if (stack == null || string.IsNullOrWhiteSpace(stack.ItemId))
+                if (stack == null || !TryResolveItemId(stack.ItemId, out string resolvedItemId))
                 {
                     continue;
                 }
 
-                string resolvedItemId = NormalizeItemId(stack.ItemId);
-                int quantity = Mathf.Max(1, stack.Quantity);
-
-                if (TryGetItemDefinitionInternal(resolvedItemId, out InventoryItemDefinition definition) && definition != null && definition.Stackable)
-                {
-                    quantity = Mathf.Min(quantity, definition.MaxStack);
-                }
-
-                itemQuantities[resolvedItemId] = quantity;
+                SetResolvedQuantity(resolvedItemId, ClampQuantityForDefinition(resolvedItemId, stack.Quantity));
             }
         }
 
         NotifyInventoryChanged();
+    }
+
+    private void ClearQuantities()
+    {
+        itemQuantities.Clear();
+    }
+
+    private void ShowInventoryToast(string resolvedItemId, int quantity, bool gained)
+    {
+        MainDirectorPresenter.ShowInventoryToast(GetItemDisplayName(resolvedItemId), quantity, gained);
     }
 
     private int GetQuantityInternal(string itemId)
@@ -482,5 +471,107 @@ public class InventoryManager : MonoBehaviour
 
         string resolvedItemId = NormalizeItemId(itemId);
         return definitionsById.TryGetValue(resolvedItemId, out definition) && definition != null;
+    }
+}
+
+[System.Serializable]
+public class InventoryItemStack
+{
+    [SerializeField] private InventoryItemDefinition itemDefinition;
+    [HideInInspector]
+    [SerializeField] private string itemId;
+    [Min(1)]
+    [SerializeField] private int quantity = 1;
+
+    public InventoryItemDefinition ItemDefinition => itemDefinition;
+    public string ItemId => itemDefinition != null ? itemDefinition.ItemId : itemId;
+    public int Quantity => Mathf.Max(1, quantity);
+
+    public InventoryItemStack(string resolvedItemId, int amount)
+    {
+        itemId = resolvedItemId;
+        quantity = Mathf.Max(1, amount);
+    }
+
+    public InventoryItemStack(InventoryItemDefinition definition, int amount)
+    {
+        itemDefinition = definition;
+        itemId = definition != null ? definition.ItemId : string.Empty;
+        quantity = Mathf.Max(1, amount);
+    }
+
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        if (itemDefinition != null)
+        {
+            itemId = itemDefinition.ItemId;
+        }
+
+        quantity = Mathf.Max(1, quantity);
+    }
+#endif
+}
+
+public static class InventoryYarnBridge
+{
+    private static bool TryGetManager(string action, string itemId, out InventoryManager manager)
+    {
+        manager = InventoryManager.Instance;
+        if (manager != null)
+        {
+            return true;
+        }
+
+        Debug.LogWarning($"Cannot {action} item '{itemId}' because no InventoryManager exists in the scene.");
+        return false;
+    }
+
+    [YarnFunction("has_item")]
+    public static bool HasItem(string itemId)
+    {
+        return InventoryManager.Instance != null && InventoryManager.Instance.HasItem(itemId);
+    }
+
+    [YarnFunction("item_count")]
+    public static float ItemCount(string itemId)
+    {
+        return InventoryManager.Instance != null ? InventoryManager.Instance.GetQuantity(itemId) : 0f;
+    }
+
+    [YarnCommand("give_item")]
+    public static void GiveItem(string itemId, int quantity = 1)
+    {
+        if (!TryGetManager("give", itemId, out InventoryManager manager))
+        {
+            return;
+        }
+
+        manager.AddItem(itemId, quantity);
+    }
+
+    [YarnCommand("remove_item")]
+    public static void RemoveItem(string itemId, int quantity = 1)
+    {
+        if (!TryGetManager("remove", itemId, out InventoryManager manager))
+        {
+            return;
+        }
+
+        manager.RemoveItem(itemId, quantity);
+    }
+
+    [YarnCommand("use_item")]
+    public static void UseItem(string itemId, int quantity = 1)
+    {
+        if (!TryGetManager("use", itemId, out InventoryManager manager))
+        {
+            return;
+        }
+
+        if (!manager.RemoveItem(itemId, quantity))
+        {
+            Debug.LogWarning($"Cannot use item '{itemId}' because it is not in the inventory.");
+        }
     }
 }

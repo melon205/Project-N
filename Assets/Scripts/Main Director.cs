@@ -8,6 +8,8 @@ using Yarn.Unity;
 
 public class MainDirector : MonoBehaviour
 {
+    private const string StoryLineBottomPadding = "\n\n\n\n\n\n\n\n\n\n";
+
     [Header("References")]
     public RectTransform content;
     public RectTransform viewport;
@@ -15,13 +17,8 @@ public class MainDirector : MonoBehaviour
     public ScrollRect scrollRect;
     public DialogueRunner dialogueRunner;
 
-    [Header("First Story")]
-    [TextArea(3, 10)]
-    public string firstStoryText = "k";
-
     [Header("Yarn")]
     public bool startDialogueOnStart = true;
-    public string initialDialogueNode = "MainStory";
 
     [Header("Scroll")]
     public float scrollDuration = 0.45f;
@@ -47,8 +44,20 @@ public class MainDirector : MonoBehaviour
 
     private void Start()
     {
+        if (dialogueRunner != null)
+        {
+            dialogueRunner.onNodeStart.AddListener(OnNodeStart);
+        }
         ConfigureContentLayout();
         StartCoroutine(BeginStartup());
+    }
+
+    private void OnNodeStart(string nodeName)
+    {
+        if (SaveManager.Instance != null)
+        {
+            SaveManager.Instance.UpdateLastYarnNode(nodeName);
+        }
     }
 
     private IEnumerator BeginStartup()
@@ -57,40 +66,46 @@ public class MainDirector : MonoBehaviour
         RefreshLayout();
         SetScrollToTopImmediate();
 
-        if (startDialogueOnStart && dialogueRunner != null && !string.IsNullOrWhiteSpace(initialDialogueNode))
+        if (startDialogueOnStart && dialogueRunner != null)
         {
-            StartDialogueFromNode(initialDialogueNode);
-            yield break;
-        }
+            SaveData data = null;
+            if (SaveManager.Instance != null)
+            {
+                data = SaveManager.Instance.LoadGame();
+            }
 
-        if (!string.IsNullOrWhiteSpace(firstStoryText))
-        {
-            AddStoryLine(firstStoryText);
+            if (data != null && !string.IsNullOrWhiteSpace(data.lastYarnNode))
+            {
+                StartDialogueFromNode(data.lastYarnNode);
+            }
         }
     }
 
     public void StartInitialDialogue()
     {
-        if (string.IsNullOrWhiteSpace(initialDialogueNode))
+        if (SaveManager.Instance == null)
         {
-            Debug.LogWarning("Initial dialogue node is empty.", this);
             return;
         }
 
-        StartDialogueFromNode(initialDialogueNode);
+        SaveData data = SaveManager.Instance.LoadGame();
+        if (data != null && !string.IsNullOrWhiteSpace(data.lastYarnNode))
+        {
+            StartDialogueFromNode(data.lastYarnNode);
+        }
     }
 
     public void StartDialogueFromNode(string nodeName)
     {
-        if (dialogueRunner == null)
-        {
-            Debug.LogError("MainDirector requires a DialogueRunner reference to start Yarn dialogue.", this);
-            return;
-        }
-
         if (string.IsNullOrWhiteSpace(nodeName))
         {
             Debug.LogWarning("Cannot start dialogue with an empty node name.", this);
+            return;
+        }
+
+        if (dialogueRunner == null)
+        {
+            Debug.LogError("MainDirector requires a DialogueRunner reference to start Yarn dialogue.", this);
             return;
         }
 
@@ -116,6 +131,27 @@ public class MainDirector : MonoBehaviour
         layoutGroup.childForceExpandHeight = false;
     }
 
+    public void ClearStory()
+    {
+        if (content != null)
+        {
+            foreach (Transform child in content)
+            {
+                Destroy(child.gameObject);
+            }
+        }
+
+        StopTypingCoroutine();
+        StopScrollCoroutine();
+        isTyping = false;
+        skipRequested = false;
+        currentTypingLineText = null;
+        currentTypingLineRect = null;
+        currentLineCompletion = null;
+
+        SetScrollToTopImmediate();
+    }
+
     public void AddStoryLine(string message)
     {
         if (isTyping)
@@ -123,7 +159,14 @@ public class MainDirector : MonoBehaviour
             CompleteCurrentLineImmediately();
         }
 
-        message += "\n\n\n\n\n\n\n\n\n\n";
+        if (content == null || storyLinePrefab == null)
+        {
+            Debug.LogError("MainDirector requires both content and storyLinePrefab references.", this);
+            currentLineCompletion?.TrySetResult(false);
+            return;
+        }
+
+        message += StoryLineBottomPadding;
         autoScrollEnabled = true;
         skipRequested = false;
         currentLineCompletion = new TaskCompletionSource<bool>();
@@ -151,11 +194,7 @@ public class MainDirector : MonoBehaviour
             SetScrollToTopImmediate();
         }
 
-        if (typingCoroutine != null)
-        {
-            StopCoroutine(typingCoroutine);
-        }
-
+        StopTypingCoroutine();
         typingCoroutine = StartCoroutine(TypeLine(lineText, lineRect));
     }
 
@@ -181,37 +220,18 @@ public class MainDirector : MonoBehaviour
 
     private void Update()
     {
-        bool pressedThisFrame = false;
-        bool releasedThisFrame = false;
-
-        if (Mouse.current != null)
-        {
-            if (Mouse.current.leftButton.wasPressedThisFrame)
-                pressedThisFrame = true;
-            if (Mouse.current.leftButton.wasReleasedThisFrame)
-                releasedThisFrame = true;
-        }
-
-        if (Touchscreen.current != null)
-        {
-            if (Touchscreen.current.primaryTouch.press.wasPressedThisFrame)
-                pressedThisFrame = true;
-            if (Touchscreen.current.primaryTouch.press.wasReleasedThisFrame)
-                releasedThisFrame = true;
-        }
+        GetPointerState(out bool pressedThisFrame, out bool releasedThisFrame);
 
         if (pressedThisFrame)
         {
             autoScrollEnabled = false;
-
-            if (scrollCoroutine != null)
-            {
-                StopCoroutine(scrollCoroutine);
-                scrollCoroutine = null;
-            }
+            StopScrollCoroutine();
         }
 
-        if (!isTyping) return;
+        if (!isTyping)
+        {
+            return;
+        }
 
         if (releasedThisFrame)
         {
@@ -253,14 +273,7 @@ public class MainDirector : MonoBehaviour
 
             if (autoScrollEnabled)
             {
-                float targetY = GetTargetScrollY(lineRect);
-
-                if (scrollCoroutine != null)
-                {
-                    StopCoroutine(scrollCoroutine);
-                }
-
-                scrollCoroutine = StartCoroutine(SmoothScrollTo(targetY));
+                StartScrollTo(lineRect);
             }
 
             yield return new WaitForSeconds(interval);
@@ -271,31 +284,15 @@ public class MainDirector : MonoBehaviour
 
         if (autoScrollEnabled)
         {
-            float finalTargetY = GetTargetScrollY(lineRect);
-
-            if (scrollCoroutine != null)
-            {
-                StopCoroutine(scrollCoroutine);
-            }
-
-            scrollCoroutine = StartCoroutine(SmoothScrollTo(finalTargetY));
+            StartScrollTo(lineRect);
         }
 
-        isTyping = false;
-        skipRequested = false;
-        typingCoroutine = null;
-        currentTypingLineText = null;
-        currentTypingLineRect = null;
-        currentLineCompletion?.TrySetResult(true);
+        FinishCurrentLineTyping();
     }
 
     private void CompleteCurrentLineImmediately()
     {
-        if (typingCoroutine != null)
-        {
-            StopCoroutine(typingCoroutine);
-            typingCoroutine = null;
-        }
+        StopTypingCoroutine();
 
         if (currentTypingLineText != null)
         {
@@ -305,20 +302,11 @@ public class MainDirector : MonoBehaviour
 
             if (autoScrollEnabled && currentTypingLineRect != null)
             {
-                if (scrollCoroutine != null)
-                {
-                    StopCoroutine(scrollCoroutine);
-                }
-
-                scrollCoroutine = StartCoroutine(SmoothScrollTo(GetTargetScrollY(currentTypingLineRect)));
+                StartScrollTo(currentTypingLineRect);
             }
         }
 
-        isTyping = false;
-        skipRequested = false;
-        currentTypingLineText = null;
-        currentTypingLineRect = null;
-        currentLineCompletion?.TrySetResult(true);
+        FinishCurrentLineTyping();
     }
 
     private void PrepareLineLayout(RectTransform lineRect)
@@ -397,9 +385,7 @@ public class MainDirector : MonoBehaviour
         }
 
         scrollRect.StopMovement();
-        Vector2 pos = content.anchoredPosition;
-        pos.y = 0f;
-        content.anchoredPosition = pos;
+        SetContentY(0f);
         scrollRect.verticalNormalizedPosition = 1f;
     }
 
@@ -431,17 +417,85 @@ public class MainDirector : MonoBehaviour
             float t = elapsed / scrollDuration;
             t = 1f - Mathf.Pow(1f - t, 3f);
 
-            Vector2 pos = content.anchoredPosition;
-            pos.y = Mathf.Lerp(startY, targetY, t);
-            content.anchoredPosition = pos;
+            SetContentY(Mathf.Lerp(startY, targetY, t));
 
             yield return null;
         }
 
-        Vector2 finalPos = content.anchoredPosition;
-        finalPos.y = targetY;
-        content.anchoredPosition = finalPos;
-
+        SetContentY(targetY);
         scrollCoroutine = null;
+    }
+
+    private void GetPointerState(out bool pressedThisFrame, out bool releasedThisFrame)
+    {
+        pressedThisFrame = false;
+        releasedThisFrame = false;
+
+        if (Mouse.current != null)
+        {
+            pressedThisFrame |= Mouse.current.leftButton.wasPressedThisFrame;
+            releasedThisFrame |= Mouse.current.leftButton.wasReleasedThisFrame;
+        }
+
+        if (Touchscreen.current != null)
+        {
+            pressedThisFrame |= Touchscreen.current.primaryTouch.press.wasPressedThisFrame;
+            releasedThisFrame |= Touchscreen.current.primaryTouch.press.wasReleasedThisFrame;
+        }
+    }
+
+    private void StartScrollTo(RectTransform lineRect)
+    {
+        if (lineRect == null)
+        {
+            return;
+        }
+
+        StopScrollCoroutine();
+        scrollCoroutine = StartCoroutine(SmoothScrollTo(GetTargetScrollY(lineRect)));
+    }
+
+    private void StopTypingCoroutine()
+    {
+        if (typingCoroutine == null)
+        {
+            return;
+        }
+
+        StopCoroutine(typingCoroutine);
+        typingCoroutine = null;
+    }
+
+    private void StopScrollCoroutine()
+    {
+        if (scrollCoroutine == null)
+        {
+            return;
+        }
+
+        StopCoroutine(scrollCoroutine);
+        scrollCoroutine = null;
+    }
+
+    private void FinishCurrentLineTyping()
+    {
+        isTyping = false;
+        skipRequested = false;
+        typingCoroutine = null;
+        currentTypingLineText = null;
+        currentTypingLineRect = null;
+        currentLineCompletion?.TrySetResult(true);
+    }
+
+    private void SetContentY(float y)
+    {
+        if (content == null)
+        {
+            return;
+        }
+
+        Vector2 position = content.anchoredPosition;
+        position.y = y;
+        content.anchoredPosition = position;
     }
 }

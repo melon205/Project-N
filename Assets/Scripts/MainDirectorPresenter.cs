@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Text;
@@ -10,6 +11,8 @@ using Yarn.Unity;
 
 public class MainDirectorPresenter : DialoguePresenterBase
 {
+    private static MainDirectorPresenter instance;
+
     [SerializeField] private MainDirector mainDirector;
     [SerializeField] private bool includeCharacterName = true;
     [Header("Choice UI")]
@@ -26,20 +29,43 @@ public class MainDirectorPresenter : DialoguePresenterBase
     [SerializeField] private CanvasGroup floatingMessageCanvasGroup;
     [SerializeField] private float floatingMessageDuration = 1.25f;
     [SerializeField] private float floatingMessageFadeDuration = 0.2f;
+    [Header("Inventory Toast")]
+    [SerializeField] private Color inventoryGainToastColor = new Color(0.3f, 0.85f, 0.3f);
+    [SerializeField] private Color inventoryUseToastColor = new Color(0.9f, 0.25f, 0.25f);
     [SerializeField] private string missingItemMessageFormat = "{0}이(가) 필요합니다.";
 
     private TMP_Text[] choiceLabels;
     private UnityAction[] choiceButtonActions;
     private DialogueOption[] currentOptions;
-    private YarnTaskCompletionSource<DialogueOption?> currentOptionSelection;
+    private YarnTaskCompletionSource<DialogueOption> currentOptionSelection;
     private readonly StringBuilder pendingStoryText = new StringBuilder();
     private Coroutine floatingMessageCoroutine;
+    private Color defaultToastTextColor = Color.white;
+
+    private readonly struct ToastMessage
+    {
+        public readonly string text;
+        public readonly Color color;
+        public ToastMessage(string t, Color c)
+        {
+            text = t;
+            color = c;
+        }
+    }
+    private readonly Queue<ToastMessage> toastQueue = new Queue<ToastMessage>();
 
     private void Awake()
     {
+        instance = this;
+
         if (mainDirector == null)
         {
             mainDirector = FindAnyObjectByType<MainDirector>();
+        }
+
+        if (floatingMessageText != null)
+        {
+            defaultToastTextColor = floatingMessageText.color;
         }
 
         CacheChoiceLabels();
@@ -49,7 +75,24 @@ public class MainDirectorPresenter : DialoguePresenterBase
 
     private void OnDestroy()
     {
+        if (instance == this)
+        {
+            instance = null;
+        }
+
         UnregisterChoiceButtonCallbacks();
+    }
+
+    public static void ShowInventoryToast(string itemDisplayName, int quantity, bool gained)
+    {
+        if (instance == null || string.IsNullOrWhiteSpace(itemDisplayName) || quantity <= 0)
+        {
+            return;
+        }
+
+        Color toastColor = gained ? instance.inventoryGainToastColor : instance.inventoryUseToastColor;
+        string prefix = gained ? "+" : "-";
+        instance.ShowToastMessage($"{prefix} {itemDisplayName} {quantity}개", toastColor);
     }
 
     public override YarnTask OnDialogueStartedAsync()
@@ -89,7 +132,7 @@ public class MainDirectorPresenter : DialoguePresenterBase
         return YarnTask.CompletedTask;
     }
 
-    public override async YarnTask<DialogueOption?> RunOptionsAsync(DialogueOption[] dialogueOptions, LineCancellationToken cancellationToken)
+    public override async YarnTask<DialogueOption> RunOptionsAsync(DialogueOption[] dialogueOptions, LineCancellationToken cancellationToken)
     {
         await FlushPendingStoryTextAsync(cancellationToken);
 
@@ -122,7 +165,7 @@ public class MainDirectorPresenter : DialoguePresenterBase
         }
 
         currentOptions = new DialogueOption[choiceButtons.Length];
-        currentOptionSelection = new YarnTaskCompletionSource<DialogueOption?>();
+        currentOptionSelection = new YarnTaskCompletionSource<DialogueOption>();
 
         int visibleIndex = 0;
         for (int i = 0; i < dialogueOptions.Length; i++)
@@ -156,7 +199,7 @@ public class MainDirectorPresenter : DialoguePresenterBase
 
         CancelSelectionWhenDialogueCancelled().Forget();
 
-        DialogueOption? selectedOption = await currentOptionSelection.Task;
+        DialogueOption selectedOption = await currentOptionSelection.Task;
         cancellationSource.Cancel();
 
         currentOptionSelection = null;
@@ -390,44 +433,60 @@ public class MainDirectorPresenter : DialoguePresenterBase
 
     private void ShowUnavailableOptionMessage(DialogueOption option)
     {
-        if (floatingMessageText == null)
-        {
-            return;
-        }
-
         string requiredItemId = GetMetadataValue(option, requiredItemTagPrefix);
         string message = string.IsNullOrWhiteSpace(requiredItemId)
             ? option.Line.Text.Text
             : string.Format(missingItemMessageFormat, InventoryManager.GetDisplayNameOrId(requiredItemId));
 
-        floatingMessageText.text = message;
-
-        if (floatingMessageCoroutine != null)
-        {
-            StopCoroutine(floatingMessageCoroutine);
-        }
-
-        floatingMessageCoroutine = StartCoroutine(PlayFloatingMessage());
+        ShowToastMessage(message, defaultToastTextColor);
     }
 
-    private IEnumerator PlayFloatingMessage()
+    private void ShowToastMessage(string message, Color textColor)
     {
-        if (floatingMessageCanvasGroup == null)
+        if (floatingMessageText == null)
         {
-            floatingMessageText.gameObject.SetActive(true);
-            yield return new WaitForSeconds(floatingMessageDuration);
-            floatingMessageText.gameObject.SetActive(false);
-            floatingMessageCoroutine = null;
-            yield break;
+            return;
         }
 
-        floatingMessageText.gameObject.SetActive(true);
-        floatingMessageCanvasGroup.gameObject.SetActive(true);
-        yield return FadeFloatingMessage(0f, 1f, floatingMessageFadeDuration);
-        yield return new WaitForSeconds(floatingMessageDuration);
-        yield return FadeFloatingMessage(1f, 0f, floatingMessageFadeDuration);
-        floatingMessageText.gameObject.SetActive(false);
-        floatingMessageCanvasGroup.gameObject.SetActive(false);
+        toastQueue.Enqueue(new ToastMessage(message, textColor));
+
+        if (floatingMessageCoroutine == null)
+        {
+            floatingMessageCoroutine = StartCoroutine(ProcessToastQueue());
+        }
+    }
+
+    private IEnumerator ProcessToastQueue()
+    {
+        while (toastQueue.Count > 0)
+        {
+            ToastMessage msg = toastQueue.Dequeue();
+            floatingMessageText.text = msg.text;
+            floatingMessageText.color = msg.color;
+
+            if (floatingMessageCanvasGroup == null)
+            {
+                floatingMessageText.gameObject.SetActive(true);
+                yield return new WaitForSeconds(floatingMessageDuration);
+                floatingMessageText.gameObject.SetActive(false);
+            }
+            else
+            {
+                floatingMessageText.gameObject.SetActive(true);
+                floatingMessageCanvasGroup.gameObject.SetActive(true);
+                yield return FadeFloatingMessage(0f, 1f, floatingMessageFadeDuration);
+                yield return new WaitForSeconds(floatingMessageDuration);
+                yield return FadeFloatingMessage(1f, 0f, floatingMessageFadeDuration);
+                floatingMessageText.gameObject.SetActive(false);
+                floatingMessageCanvasGroup.gameObject.SetActive(false);
+            }
+
+            if (toastQueue.Count > 0)
+            {
+                yield return new WaitForSeconds(0.1f);
+            }
+        }
+
         floatingMessageCoroutine = null;
     }
 
@@ -458,6 +517,8 @@ public class MainDirectorPresenter : DialoguePresenterBase
             StopCoroutine(floatingMessageCoroutine);
             floatingMessageCoroutine = null;
         }
+
+        toastQueue.Clear();
 
         if (floatingMessageText != null)
         {

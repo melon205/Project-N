@@ -4,6 +4,8 @@ using UnityEngine;
 
 public class InventoryItemCardView : MonoBehaviour
 {
+    private const string EmptyDescriptionText = "Description: -";
+
     [Header("Text")]
     [SerializeField] private TMP_Text itemNameText;
     [SerializeField] private TMP_Text quantityText;
@@ -21,52 +23,20 @@ public class InventoryItemCardView : MonoBehaviour
         InventoryItemDefinition definition = stack.ItemDefinition;
         string itemName = definition != null ? definition.DisplayName : stack.ItemId;
         string description = definition != null ? definition.Description : string.Empty;
+        string additionalInfo = BuildAdditionalInfo(definition);
 
-        if (itemNameText != null)
-        {
-            itemNameText.text = itemName;
-        }
-
-        if (quantityText != null)
-        {
-            quantityText.text = $"x{stack.Quantity}";
-        }
-
-        if (descriptionText != null)
-        {
-            descriptionText.text = string.IsNullOrWhiteSpace(description) ? "Description: -" : $"Description: {description}";
-        }
-
-        if (additionalInfoText != null)
-        {
-            string additionalInfo = BuildAdditionalInfo(definition);
-            additionalInfoText.text = string.IsNullOrWhiteSpace(additionalInfo) ? string.Empty : additionalInfo;
-            additionalInfoText.gameObject.SetActive(!string.IsNullOrWhiteSpace(additionalInfo));
-        }
+        SetText(itemNameText, itemName);
+        SetText(quantityText, $"x{stack.Quantity}");
+        SetText(descriptionText, string.IsNullOrWhiteSpace(description) ? EmptyDescriptionText : $"Description: {description}");
+        SetOptionalText(additionalInfoText, additionalInfo);
     }
 
     public void Clear()
     {
-        if (itemNameText != null)
-        {
-            itemNameText.text = string.Empty;
-        }
-
-        if (quantityText != null)
-        {
-            quantityText.text = string.Empty;
-        }
-
-        if (descriptionText != null)
-        {
-            descriptionText.text = string.Empty;
-        }
-
-        if (additionalInfoText != null)
-        {
-            additionalInfoText.text = string.Empty;
-            additionalInfoText.gameObject.SetActive(false);
-        }
+        SetText(itemNameText, string.Empty);
+        SetText(quantityText, string.Empty);
+        SetText(descriptionText, string.Empty);
+        SetOptionalText(additionalInfoText, string.Empty);
     }
 
     private static string BuildAdditionalInfo(InventoryItemDefinition definition)
@@ -77,32 +47,47 @@ public class InventoryItemCardView : MonoBehaviour
         }
 
         StringBuilder builder = new StringBuilder();
-
-        if (!string.IsNullOrWhiteSpace(definition.ObtainHint))
-        {
-            builder.Append("Obtain: ").Append(definition.ObtainHint);
-        }
-
-        if (!string.IsNullOrWhiteSpace(definition.UsageHint))
-        {
-            if (builder.Length > 0)
-            {
-                builder.Append('\n');
-            }
-
-            builder.Append("Use: ").Append(definition.UsageHint);
-        }
-
-        if (!string.IsNullOrWhiteSpace(definition.CraftingHint))
-        {
-            if (builder.Length > 0)
-            {
-                builder.Append('\n');
-            }
-
-            builder.Append("Craft: ").Append(definition.CraftingHint);
-        }
+        AppendLabeledLine(builder, "Obtain", definition.ObtainHint);
+        AppendLabeledLine(builder, "Use", definition.UsageHint);
+        AppendLabeledLine(builder, "Craft", definition.CraftingHint);
 
         return builder.ToString();
+    }
+
+    private static void AppendLabeledLine(StringBuilder builder, string label, string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return;
+        }
+
+        if (builder.Length > 0)
+        {
+            builder.Append('\n');
+        }
+
+        builder.Append(label).Append(": ").Append(value);
+    }
+
+    private static void SetText(TMP_Text target, string value)
+    {
+        if (target == null)
+        {
+            return;
+        }
+
+        target.text = value;
+    }
+
+    private static void SetOptionalText(TMP_Text target, string value)
+    {
+        if (target == null)
+        {
+            return;
+        }
+
+        bool hasValue = !string.IsNullOrWhiteSpace(value);
+        target.text = hasValue ? value : string.Empty;
+        target.gameObject.SetActive(hasValue);
     }
 }

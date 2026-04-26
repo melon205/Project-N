@@ -1,0 +1,17 @@
+{
+    "lastYarnNode": "MainStory",
+    "inventory": [
+        {
+            "itemId": "key",
+            "quantity": 1
+        },
+        {
+            "itemId": "anony",
+            "quantity": 1
+        }
+    ],
+    "unlockedRecipes": [
+        "TestRecipe"
+    ],
+    "yarnVariables": []
+}

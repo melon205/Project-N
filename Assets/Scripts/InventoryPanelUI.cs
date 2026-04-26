@@ -14,10 +14,7 @@ public class InventoryPanelUI : MonoBehaviour
 
     private void Awake()
     {
-        if (inventoryManager == null)
-        {
-            inventoryManager = InventoryManager.Instance;
-        }
+        ResolveManager();
     }
 
     private void OnEnable()
@@ -34,10 +31,7 @@ public class InventoryPanelUI : MonoBehaviour
     [ContextMenu("Refresh Inventory UI")]
     public void Refresh()
     {
-        if (inventoryManager == null)
-        {
-            inventoryManager = InventoryManager.Instance;
-        }
+        ResolveManager();
 
         if (inventoryManager == null || contentRoot == null || cardPrefab == null)
         {
@@ -58,21 +52,7 @@ public class InventoryPanelUI : MonoBehaviour
         }
 
         EnsurePoolSize(stacks.Count);
-
-        for (int i = 0; i < cardPool.Count; i++)
-        {
-            bool shouldShow = i < stacks.Count;
-            InventoryItemCardView card = cardPool[i];
-
-            card.gameObject.SetActive(shouldShow);
-            if (!shouldShow)
-            {
-                card.Clear();
-                continue;
-            }
-
-            card.Bind(stacks[i]);
-        }
+        BindVisibleCards(stacks);
     }
 
     private void EnsurePoolSize(int requiredCount)
@@ -85,14 +65,49 @@ public class InventoryPanelUI : MonoBehaviour
         }
     }
 
-    private void HideAllCards()
+    private void ResolveManager()
+    {
+        if (inventoryManager == null)
+        {
+            inventoryManager = InventoryManager.Instance;
+        }
+    }
+
+    private void BindVisibleCards(IReadOnlyList<InventoryItemStack> stacks)
     {
         for (int i = 0; i < cardPool.Count; i++)
         {
             InventoryItemCardView card = cardPool[i];
-            card.Clear();
-            card.gameObject.SetActive(false);
+            bool shouldShow = i < stacks.Count;
+
+            if (!shouldShow)
+            {
+                HideCard(card);
+                continue;
+            }
+
+            card.gameObject.SetActive(true);
+            card.Bind(stacks[i]);
         }
+    }
+
+    private void HideAllCards()
+    {
+        for (int i = 0; i < cardPool.Count; i++)
+        {
+            HideCard(cardPool[i]);
+        }
+    }
+
+    private static void HideCard(InventoryItemCardView card)
+    {
+        if (card == null)
+        {
+            return;
+        }
+
+        card.Clear();
+        card.gameObject.SetActive(false);
     }
 
     private void SetEmptyState(bool visible, string message)

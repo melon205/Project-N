@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1fdfb1b8dee84694f9da771045e9097c, type: 3}
+  m_Name: anony
+  m_EditorClassIdentifier: Assembly-CSharp::InventoryItemDefinition
+  itemId: anony
+  displayName: "\uC815\uCCB4\uBD88\uBA85\uC758 \uBB3C\uCCB4"
+  category: 5
+  stackable: 1
+  maxStack: 99
+  sortOrder: 0
+  craftingTags: []
+  description: "\uC815\uCCB4\uBAA8\uB97C \uBB3C\uCCB4\uC774\uB2E4"
+  obtainHint: 
+  usageHint: 
+  craftingHint: 
+  icon: {fileID: 0}
